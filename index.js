@@ -16,6 +16,7 @@ const TIME_MS = 1
 const TIME_SEC = TIME_MS * 1000
 const TIME_MIN = TIME_SEC * 60
 const TIME_HOUR = TIME_MIN * 60
+const TIME_BETWEEN_SMS = TIME_HOUR*3;
 
 // Fares
 var prevLowestOutboundFare
@@ -47,6 +48,8 @@ var interval = 30 // In minutes
 var fareType = "DOLLARS"
 var isOneWay = false
 var isInternational = false
+var lastSentText = false
+var now = new Date()
 
 // Parse command line options (no validation, sorry!)
 process.argv.forEach((arg, i, argv) => {
@@ -104,7 +107,6 @@ const isTwilioConfigured = process.env.TWILIO_ACCOUNT_SID &&
                            process.env.TWILIO_AUTH_TOKEN &&
                            process.env.TWILIO_PHONE_FROM &&
                            process.env.TWILIO_PHONE_TO
-
 /**
  * Dashboard renderer
  */
@@ -375,10 +377,11 @@ waypoints.map(w => dashboard.waypoint(w))
  * @return {Void}
  */
 const sendTextMessage = (message) => {
+  lastSentText = new Date()
   try {
     const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
 
-    twilioClient.sendMessage({
+    twilioClient.messages.create({
       from: process.env.TWILIO_PHONE_FROM,
       to: process.env.TWILIO_PHONE_TO,
       body: message
@@ -525,7 +528,8 @@ const fetch = () => {
             rainbow(message)
           ])
 
-          if (isTwilioConfigured) {
+          now = new Date();
+          if ( isTwilioConfigured && (!lastSentText || lastSentText.getTime() > now.getTime()+TIME_BETWEEN_SMS) ){
             sendTextMessage(message)
           }
         }
